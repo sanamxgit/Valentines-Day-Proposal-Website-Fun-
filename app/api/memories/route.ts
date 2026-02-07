@@ -15,15 +15,17 @@ export async function GET() {
 
     try {
       // List blobs to find our memories file
+      // Use a broader prefix to avoid errors if the exact blob doesn't exist
       const { blobs } = await list({ 
-        prefix: MEMORIES_BLOB_KEY,
+        limit: 100, // Limit results
         token: token 
       });
       
+      // Find the memories blob by exact pathname match
       const memoriesBlob = blobs.find(blob => blob.pathname === MEMORIES_BLOB_KEY);
       
       if (!memoriesBlob) {
-        // No memories file exists yet, return empty array
+        // No memories file exists yet - this is normal, return empty array
         return NextResponse.json({ memories: Array(5).fill('') });
       }
 
@@ -41,19 +43,20 @@ export async function GET() {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorName = error instanceof Error ? error.constructor.name : 'Unknown';
       
-      // If blob doesn't exist, that's fine - return empty array
+      // If blob doesn't exist, that's fine - return empty array (don't log as error)
       if (
         errorMessage.includes('does not exist') ||
         errorMessage.includes('not found') ||
         errorMessage.includes('404') ||
+        errorMessage.includes('BlobNotFound') ||
         errorName === 'BlobNotFoundError'
       ) {
-        // This is expected when no memories exist yet - don't log as error
+        // This is expected when no memories exist yet - silently return empty array
         return NextResponse.json({ memories: Array(5).fill('') });
       }
       
-      // For other errors, log but still return empty array (graceful degradation)
-      console.error('Error reading memories from blob:', errorMessage);
+      // For other unexpected errors, log but still return empty array (graceful degradation)
+      console.warn('Unexpected error reading memories from blob:', errorMessage);
       return NextResponse.json({ memories: Array(5).fill('') });
     }
   } catch (error) {
