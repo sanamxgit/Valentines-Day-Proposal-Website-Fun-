@@ -15,7 +15,7 @@ export async function GET() {
 
     try {
       // List blobs to find our memories file
-      // Use a broader prefix to avoid errors if the exact blob doesn't exist
+      // list() returns an empty array if no blobs exist - it doesn't throw an error
       const { blobs } = await list({ 
         limit: 100, // Limit results
         token: token 
@@ -26,12 +26,14 @@ export async function GET() {
       
       if (!memoriesBlob) {
         // No memories file exists yet - this is normal, return empty array
+        // Don't log anything - this is expected behavior
         return NextResponse.json({ memories: Array(5).fill('') });
       }
 
       // Fetch the blob content via its URL
       const response = await fetch(memoriesBlob.url);
       if (!response.ok) {
+        // If fetch fails, return empty array (don't log - might be transient)
         return NextResponse.json({ memories: Array(5).fill('') });
       }
       
@@ -39,28 +41,44 @@ export async function GET() {
       const data = JSON.parse(text);
       return NextResponse.json({ memories: data.memories || Array(5).fill('') });
     } catch (error) {
-      // Handle specific Vercel Blob errors
+      // Handle any errors gracefully
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorName = error instanceof Error ? error.constructor.name : 'Unknown';
       
-      // If blob doesn't exist, that's fine - return empty array (don't log as error)
-      if (
+      // Check if this is a "blob does not exist" type error
+      // These are expected when no memories exist yet - don't log them
+      const isExpectedError = 
         errorMessage.includes('does not exist') ||
         errorMessage.includes('not found') ||
         errorMessage.includes('404') ||
         errorMessage.includes('BlobNotFound') ||
-        errorName === 'BlobNotFoundError'
-      ) {
+        errorMessage.includes('The requested blob') ||
+        errorName === 'BlobNotFoundError';
+      
+      if (isExpectedError) {
         // This is expected when no memories exist yet - silently return empty array
+        // Don't log anything to avoid cluttering logs
         return NextResponse.json({ memories: Array(5).fill('') });
       }
       
       // For other unexpected errors, log but still return empty array (graceful degradation)
+      // Only log real errors, not expected "not found" scenarios
       console.warn('Unexpected error reading memories from blob:', errorMessage);
       return NextResponse.json({ memories: Array(5).fill('') });
     }
   } catch (error) {
-    console.error('Error in GET /api/memories:', error);
+    // Outer catch for any unexpected errors
+    // Only log if it's not a "not found" type error
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isExpectedError = 
+      errorMessage.includes('does not exist') ||
+      errorMessage.includes('not found') ||
+      errorMessage.includes('The requested blob');
+    
+    if (!isExpectedError) {
+      console.error('Error in GET /api/memories:', error);
+    }
+    
     return NextResponse.json({ memories: Array(5).fill('') });
   }
 }
