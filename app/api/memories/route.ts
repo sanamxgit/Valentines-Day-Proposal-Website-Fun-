@@ -23,6 +23,7 @@ export async function GET() {
       const memoriesBlob = blobs.find(blob => blob.pathname === MEMORIES_BLOB_KEY);
       
       if (!memoriesBlob) {
+        // No memories file exists yet, return empty array
         return NextResponse.json({ memories: Array(5).fill('') });
       }
 
@@ -36,8 +37,23 @@ export async function GET() {
       const data = JSON.parse(text);
       return NextResponse.json({ memories: data.memories || Array(5).fill('') });
     } catch (error) {
-      // If blob doesn't exist or any error, return empty array (graceful degradation)
-      console.error('Error reading memories from blob:', error);
+      // Handle specific Vercel Blob errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.constructor.name : 'Unknown';
+      
+      // If blob doesn't exist, that's fine - return empty array
+      if (
+        errorMessage.includes('does not exist') ||
+        errorMessage.includes('not found') ||
+        errorMessage.includes('404') ||
+        errorName === 'BlobNotFoundError'
+      ) {
+        // This is expected when no memories exist yet - don't log as error
+        return NextResponse.json({ memories: Array(5).fill('') });
+      }
+      
+      // For other errors, log but still return empty array (graceful degradation)
+      console.error('Error reading memories from blob:', errorMessage);
       return NextResponse.json({ memories: Array(5).fill('') });
     }
   } catch (error) {
