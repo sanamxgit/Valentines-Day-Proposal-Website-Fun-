@@ -3,18 +3,6 @@ import { put } from '@vercel/blob';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if BLOB_READ_WRITE_TOKEN is available
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) {
-      return NextResponse.json(
-        { 
-          error: 'Blob storage not configured', 
-          message: 'Please set up Vercel Blob Storage in your Vercel project settings. See VERCEL_SETUP.md for instructions.' 
-        },
-        { status: 500 }
-      );
-    }
-
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const index = formData.get('index') as string;
@@ -29,10 +17,10 @@ export async function POST(request: NextRequest) {
     const filename = `memory-${timestamp}-${index}-${originalName}`;
 
     // Upload to Vercel Blob Storage
+    // The token is automatically read from BLOB_READ_WRITE_TOKEN environment variable
     const blob = await put(filename, file, {
       access: 'public',
       contentType: file.type,
-      token: token,
     });
 
     return NextResponse.json({ 
@@ -44,8 +32,18 @@ export async function POST(request: NextRequest) {
     console.error('Error uploading file:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    // Provide helpful error messages
-    if (errorMessage.includes('token') || errorMessage.includes('unauthorized')) {
+    // Check for specific error types
+    if (errorMessage.includes('BLOB_READ_WRITE_TOKEN') || errorMessage.includes('token')) {
+      return NextResponse.json(
+        { 
+          error: 'Blob storage not configured', 
+          message: 'Please set up Vercel Blob Storage in your Vercel project settings. Go to your project → Storage → Create Database → Select Blob. See VERCEL_SETUP.md for detailed instructions.' 
+        },
+        { status: 500 }
+      );
+    }
+    
+    if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
       return NextResponse.json(
         { 
           error: 'Blob storage authentication failed', 
@@ -56,7 +54,11 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json(
-      { error: 'Failed to upload file', details: errorMessage },
+      { 
+        error: 'Failed to upload file', 
+        details: errorMessage,
+        message: 'Please check the server logs for more details. Make sure Vercel Blob Storage is set up in your project settings.'
+      },
       { status: 500 }
     );
   }

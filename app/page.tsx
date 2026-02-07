@@ -274,7 +274,9 @@ export default function Page() {
             });
 
             if (!uploadResponse.ok) {
-              throw new Error('Upload failed');
+              const errorData = await uploadResponse.json().catch(() => ({}));
+              const errorMessage = errorData.message || errorData.error || 'Upload failed';
+              throw new Error(errorMessage);
             }
 
             const uploadData = await uploadResponse.json();
@@ -295,7 +297,14 @@ export default function Page() {
             });
           } catch (error) {
             console.error('Error uploading image:', error);
-            alert('Failed to upload image. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+            
+            // Show user-friendly error message
+            if (errorMessage.includes('Blob storage not configured') || errorMessage.includes('BLOB_READ_WRITE_TOKEN')) {
+              alert('⚠️ Blob Storage Not Configured\n\nPlease set up Vercel Blob Storage:\n1. Go to your Vercel project dashboard\n2. Click "Storage" tab\n3. Create a Blob database\n4. Redeploy your project\n\nSee VERCEL_SETUP.md for detailed instructions.');
+            } else {
+              alert(`Failed to upload image: ${errorMessage}\n\nPlease check the Vercel function logs for more details.`);
+            }
           } finally {
             setUploading(null);
           }
