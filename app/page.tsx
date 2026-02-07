@@ -233,120 +233,91 @@ export default function Page() {
 
   const MemoryCarousel = () => {
     const [memories, setMemories] = useState<string[]>([]);
-    const [uploading, setUploading] = useState<number | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [showLoveAnimation, setShowLoveAnimation] = useState(false);
 
-    // Load existing memories on mount
+    // Load images from blob storage on mount
     useEffect(() => {
       const loadMemories = async () => {
         try {
-          const response = await fetch('/api/memories');
+          const response = await fetch('/api/memories/images');
           const data = await response.json();
-          if (data.memories && Array.isArray(data.memories)) {
-            setMemories(data.memories);
+          if (data.images && Array.isArray(data.images)) {
+            setMemories(data.images);
           } else {
-            setMemories(Array(5).fill(''));
+            setMemories(Array(7).fill(''));
           }
         } catch (error) {
-          console.error('Error loading memories:', error);
-          setMemories(Array(5).fill(''));
+          console.error('Error loading images:', error);
+          setMemories(Array(7).fill(''));
         }
       };
       loadMemories();
     }, []);
 
-    const handleMemoryClick = (index: number) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/*';
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (file) {
-          setUploading(index);
-          try {
-            // Upload image to server
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('index', index.toString());
+    const handleMemoryClick = (imageUrl: string, index: number) => {
+      if (!imageUrl) return;
+      
+      // Show love animation for 2 seconds
+      setShowLoveAnimation(true);
+      setTimeout(() => {
+        setShowLoveAnimation(false);
+      }, 2000);
+      
+      // Open modal with image
+      setSelectedImage(imageUrl);
+    };
 
-            const uploadResponse = await fetch('/api/memories/upload', {
-              method: 'POST',
-              body: formData,
-            });
-
-            if (!uploadResponse.ok) {
-              const errorData = await uploadResponse.json().catch(() => ({}));
-              const errorMessage = errorData.message || errorData.error || 'Upload failed';
-              throw new Error(errorMessage);
-            }
-
-            const uploadData = await uploadResponse.json();
-            const imageUrl = uploadData.url;
-
-            // Update local state
-            const newMemories = [...memories];
-            newMemories[index] = imageUrl;
-            setMemories(newMemories);
-
-            // Save to server
-            await fetch('/api/memories', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ memories: newMemories }),
-            });
-          } catch (error) {
-            console.error('Error uploading image:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
-            
-            // Show user-friendly error message
-            if (errorMessage.includes('Blob storage not configured') || errorMessage.includes('BLOB_READ_WRITE_TOKEN')) {
-              alert('⚠️ Blob Storage Not Configured\n\nPlease set up Vercel Blob Storage:\n1. Go to your Vercel project dashboard\n2. Click "Storage" tab\n3. Create a Blob database\n4. Redeploy your project\n\nSee VERCEL_SETUP.md for detailed instructions.');
-            } else {
-              alert(`Failed to upload image: ${errorMessage}\n\nPlease check the Vercel function logs for more details.`);
-            }
-          } finally {
-            setUploading(null);
-          }
-        }
-      };
-      input.click();
+    const closeModal = () => {
+      setSelectedImage(null);
     };
 
     return (
-      <div className="carousel">
-        {memories.map((memory, idx) => (
-          <div
-            key={idx}
-            className={`memory-slot ${memory ? 'filled' : ''}`}
-            onClick={() => handleMemoryClick(idx)}
-            style={memory ? { backgroundImage: `url(${memory})` } : {}}
-          >
-            {uploading === idx && (
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                color: 'var(--primary-pink)',
-                fontWeight: '600',
-                zIndex: 10,
-                background: 'rgba(255, 255, 255, 0.9)',
-                padding: '10px 20px',
-                borderRadius: '10px'
-              }}>
-                Uploading...
-              </div>
-            )}
-            {!memory && uploading !== idx && (
-              <div className="memory-placeholder">
-                <div style={{ fontSize: '2rem', marginBottom: '5px' }}>❤️</div>
-                <p>Memory {idx + 1}</p>
-              </div>
-            )}
+      <>
+        <div className="carousel">
+          {memories.map((memory, idx) => (
+            <div
+              key={idx}
+              className={`memory-slot ${memory ? 'filled' : ''}`}
+              onClick={() => handleMemoryClick(memory, idx)}
+              style={memory ? { backgroundImage: `url(${memory})` } : {}}
+            >
+              {!memory && (
+                <div className="memory-placeholder">
+                  <div style={{ fontSize: '2rem', marginBottom: '5px' }}>❤️</div>
+                  <p>Memory {idx + 1}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Love Animation Overlay */}
+        {showLoveAnimation && (
+          <div className="love-animation-overlay">
+            <div className="love-heart">💕</div>
+            <div className="love-heart">💖</div>
+            <div className="love-heart">💗</div>
+            <div className="love-heart">💝</div>
+            <div className="love-heart">💞</div>
+            <div className="love-heart">💓</div>
+            <div className="love-heart">❤️</div>
+            <div className="love-heart">💜</div>
+            <div className="love-heart">🧡</div>
+            <div className="love-heart">💛</div>
           </div>
-        ))}
-      </div>
+        )}
+
+        {/* Image Modal */}
+        {selectedImage && (
+          <div className="image-modal-overlay" onClick={closeModal}>
+            <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="image-modal-close" onClick={closeModal}>×</button>
+              <img src={selectedImage} alt="Memory" className="image-modal-img" />
+            </div>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -896,6 +867,169 @@ export default function Page() {
           font-size: 0.9rem;
         }
 
+        /* Love Animation Overlay */
+        .love-animation-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .love-heart {
+          position: absolute;
+          font-size: 3rem;
+          animation: loveFloat 2s ease-out forwards;
+          opacity: 0;
+        }
+
+        @keyframes loveFloat {
+          0% {
+            opacity: 1;
+            transform: translateY(0) scale(0.5) rotate(0deg);
+          }
+          50% {
+            opacity: 1;
+            transform: translateY(-100px) scale(1.2) rotate(180deg);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-200px) scale(0.8) rotate(360deg);
+          }
+        }
+
+        .love-heart:nth-child(1) {
+          left: 10%;
+          animation-delay: 0s;
+        }
+
+        .love-heart:nth-child(2) {
+          left: 20%;
+          animation-delay: 0.1s;
+        }
+
+        .love-heart:nth-child(3) {
+          left: 30%;
+          animation-delay: 0.2s;
+        }
+
+        .love-heart:nth-child(4) {
+          left: 40%;
+          animation-delay: 0.3s;
+        }
+
+        .love-heart:nth-child(5) {
+          left: 50%;
+          animation-delay: 0.4s;
+        }
+
+        .love-heart:nth-child(6) {
+          left: 60%;
+          animation-delay: 0.5s;
+        }
+
+        .love-heart:nth-child(7) {
+          left: 70%;
+          animation-delay: 0.6s;
+        }
+
+        .love-heart:nth-child(8) {
+          left: 80%;
+          animation-delay: 0.7s;
+        }
+
+        .love-heart:nth-child(9) {
+          left: 15%;
+          animation-delay: 0.2s;
+        }
+
+        .love-heart:nth-child(10) {
+          left: 85%;
+          animation-delay: 0.8s;
+        }
+
+        /* Image Modal */
+        .image-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .image-modal-content {
+          position: relative;
+          max-width: 90%;
+          max-height: 90%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .image-modal-img {
+          max-width: 100%;
+          max-height: 90vh;
+          object-fit: contain;
+          border-radius: 10px;
+          box-shadow: 0 10px 40px rgba(255, 107, 157, 0.3);
+          animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .image-modal-close {
+          position: absolute;
+          top: -40px;
+          right: 0;
+          background: var(--primary-pink);
+          color: white;
+          border: none;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          font-size: 24px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          z-index: 10001;
+        }
+
+        .image-modal-close:hover {
+          background: #ff4480;
+          transform: scale(1.1);
+        }
+
         @media (max-width: 640px) {
           .button-group {
             flex-direction: column;
@@ -912,6 +1046,19 @@ export default function Page() {
 
           .carousel {
             grid-template-columns: repeat(2, 1fr);
+          }
+
+          .image-modal-content {
+            max-width: 95%;
+          }
+
+          .image-modal-close {
+            top: -50px;
+            right: -10px;
+          }
+
+          .love-heart {
+            font-size: 2rem;
           }
         }
       `}</style>
