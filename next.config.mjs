@@ -6,7 +6,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Ensure clean builds
+  // Ensure clean builds - updated to force fresh deployment
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
