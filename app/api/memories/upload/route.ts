@@ -30,12 +30,14 @@ export async function POST(request: NextRequest) {
     const filename = `memory-${timestamp}-${index}-${originalName}`;
 
     console.log('Attempting to upload file:', filename, 'Size:', file.size, 'Type:', file.type);
+    console.log('Token exists:', !!token, 'Token length:', token?.length);
 
     // Upload to Vercel Blob Storage
-    // The token is automatically read from BLOB_READ_WRITE_TOKEN environment variable
+    // Explicitly pass the token to ensure it's used
     const blob = await put(filename, file, {
       access: 'public',
       contentType: file.type,
+      token: token, // Explicitly pass the token
     });
 
     console.log('Upload successful, URL:', blob.url);

@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put, head } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 
 const MEMORIES_BLOB_KEY = 'memories-data.json';
 
 // GET - Fetch all memories
 export async function GET() {
   try {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    
+    // If no token, return empty (graceful degradation)
+    if (!token) {
+      return NextResponse.json({ memories: Array(5).fill('') });
+    }
+
     try {
-      // Check if the blob exists and get its URL
-      const blob = await head(MEMORIES_BLOB_KEY);
+      // List blobs to find our memories file
+      const { blobs } = await list({ 
+        prefix: MEMORIES_BLOB_KEY,
+        token: token 
+      });
       
-      if (!blob) {
+      const memoriesBlob = blobs.find(blob => blob.pathname === MEMORIES_BLOB_KEY);
+      
+      if (!memoriesBlob) {
         return NextResponse.json({ memories: Array(5).fill('') });
       }
 
       // Fetch the blob content via its URL
-      const response = await fetch(blob.url);
+      const response = await fetch(memoriesBlob.url);
       if (!response.ok) {
         return NextResponse.json({ memories: Array(5).fill('') });
       }
@@ -24,24 +36,12 @@ export async function GET() {
       const data = JSON.parse(text);
       return NextResponse.json({ memories: data.memories || Array(5).fill('') });
     } catch (error) {
-      // If blob doesn't exist (BlobNotFoundError), return empty array
-      if (error instanceof Error && (
-        error.message.includes('not found') || 
-        error.message.includes('404') ||
-        error.constructor.name === 'BlobNotFoundError'
-      )) {
-        return NextResponse.json({ memories: Array(5).fill('') });
-      }
-      // If token is missing, return empty array (graceful degradation)
-      if (error instanceof Error && error.message.includes('BLOB_READ_WRITE_TOKEN')) {
-        console.warn('Blob storage not configured, returning empty memories');
-        return NextResponse.json({ memories: Array(5).fill('') });
-      }
-      console.error('Error reading memories:', error);
+      // If blob doesn't exist or any error, return empty array (graceful degradation)
+      console.error('Error reading memories from blob:', error);
       return NextResponse.json({ memories: Array(5).fill('') });
     }
   } catch (error) {
-    console.error('Error reading memories:', error);
+    console.error('Error in GET /api/memories:', error);
     return NextResponse.json({ memories: Array(5).fill('') });
   }
 }
@@ -62,11 +62,23 @@ export async function POST(request: NextRequest) {
     const data = { memories };
     const jsonString = JSON.stringify(data, null, 2);
     
+    // Get token
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+      return NextResponse.json(
+        { 
+          error: 'Blob storage not configured', 
+          message: 'BLOB_READ_WRITE_TOKEN is missing.' 
+        },
+        { status: 500 }
+      );
+    }
+    
     // Save to Vercel Blob Storage
-    // The token is automatically read from BLOB_READ_WRITE_TOKEN environment variable
     await put(MEMORIES_BLOB_KEY, jsonString, {
       access: 'public',
       contentType: 'application/json',
+      token: token, // Explicitly pass the token
     });
 
     return NextResponse.json({ success: true, memories });
