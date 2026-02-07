@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { get, put } from '@vercel/blob';
+import { put, head } from '@vercel/blob';
 
 const MEMORIES_BLOB_KEY = 'memories-data.json';
 
@@ -7,14 +7,29 @@ const MEMORIES_BLOB_KEY = 'memories-data.json';
 export async function GET() {
   try {
     try {
-      // The token is automatically read from BLOB_READ_WRITE_TOKEN environment variable
-      const blob = await get(MEMORIES_BLOB_KEY);
-      const text = await blob.text();
+      // Check if the blob exists and get its URL
+      const blob = await head(MEMORIES_BLOB_KEY);
+      
+      if (!blob) {
+        return NextResponse.json({ memories: Array(5).fill('') });
+      }
+
+      // Fetch the blob content via its URL
+      const response = await fetch(blob.url);
+      if (!response.ok) {
+        return NextResponse.json({ memories: Array(5).fill('') });
+      }
+      
+      const text = await response.text();
       const data = JSON.parse(text);
       return NextResponse.json({ memories: data.memories || Array(5).fill('') });
     } catch (error) {
-      // If blob doesn't exist, return empty array
-      if (error instanceof Error && (error.message.includes('not found') || error.message.includes('404'))) {
+      // If blob doesn't exist (BlobNotFoundError), return empty array
+      if (error instanceof Error && (
+        error.message.includes('not found') || 
+        error.message.includes('404') ||
+        error.constructor.name === 'BlobNotFoundError'
+      )) {
         return NextResponse.json({ memories: Array(5).fill('') });
       }
       // If token is missing, return empty array (graceful degradation)
@@ -22,7 +37,8 @@ export async function GET() {
         console.warn('Blob storage not configured, returning empty memories');
         return NextResponse.json({ memories: Array(5).fill('') });
       }
-      throw error;
+      console.error('Error reading memories:', error);
+      return NextResponse.json({ memories: Array(5).fill('') });
     }
   } catch (error) {
     console.error('Error reading memories:', error);
