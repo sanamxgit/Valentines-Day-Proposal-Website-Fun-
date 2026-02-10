@@ -452,52 +452,58 @@ export default function Page() {
         .spline-hero {
           position: relative;
           width: 100%;
-          min-height: 100vh;
+          height: 100vh;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
-        }
-
-        .spline-section {
-          width: 100%;
-          max-width: 900px;
-          margin: 0 auto;
+          overflow: hidden;
         }
 
         .spline-card {
           width: 100%;
-          aspect-ratio: 16 / 9;
-          border-radius: 20px;
-          overflow: hidden;
-          box-shadow: 0 20px 60px rgba(255, 107, 157, 0.35);
-          background: radial-gradient(circle at top, var(--soft-white), var(--pastel-lavender));
+          height: 100%;
         }
 
-        .spline-scroll-btn {
+        .spline-scroll-text {
           position: absolute;
           bottom: 32px;
           left: 50%;
           transform: translateX(-50%);
-          padding: 10px 24px;
-          border-radius: 999px;
           border: none;
-          cursor: pointer;
-          background: rgba(255, 255, 255, 0.9);
-          color: var(--primary-pink);
-          font-weight: 600;
+          background: none;
+          padding: 8px 16px;
+          color: #ffffff;
+          font-weight: 500;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
+          font-size: 0.8rem;
           display: flex;
           align-items: center;
-          gap: 8px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+          gap: 6px;
+          cursor: pointer;
+          opacity: 0.9;
+          text-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
           font-family: 'Poppins', sans-serif;
-          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          transition: opacity 0.2s ease, transform 0.2s ease;
         }
 
-        .spline-scroll-btn:hover {
+        .spline-scroll-text span:last-child {
+          font-size: 1rem;
+          animation: scrollArrow 1.2s ease-in-out infinite;
+        }
+
+        @keyframes scrollArrow {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(3px);
+          }
+        }
+
+        .spline-scroll-text:hover {
+          opacity: 1;
           transform: translateX(-50%) translateY(-2px);
-          box-shadow: 0 15px 40px rgba(255, 107, 157, 0.4);
-          background: rgba(255, 255, 255, 1);
         }
 
         .envelope-wrapper {
@@ -1148,21 +1154,16 @@ export default function Page() {
 
       {/* Spline Hero */}
       <div className="spline-hero">
-        <div className="container">
-          <div className="spline-section">
-            <div className="spline-card">
-              <iframe
-                src="https://my.spline.design/beepboopbemyvalentine-rsRunEld6VJHXaHpewUBeJG4/"
-                frameBorder="0"
-                width="100%"
-                height="100%"
-                style={{ borderRadius: '20px' }}
-                allowFullScreen
-              />
-            </div>
-          </div>
+        <div className="spline-card">
+          <iframe
+            src="https://my.spline.design/beepboopbemyvalentine-rsRunEld6VJHXaHpewUBeJG4/"
+            frameBorder="0"
+            width="100%"
+            height="100%"
+            allowFullScreen
+          />
         </div>
-        <button className="spline-scroll-btn" onClick={handleScrollDown}>
+        <button className="spline-scroll-text" onClick={handleScrollDown}>
           <span>Scroll down</span>
           <span>▼</span>
         </button>
