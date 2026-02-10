@@ -12,6 +12,7 @@ export default function Page() {
   const heartIntervalRef = useRef<NodeJS.Timeout>();
   const noBtnRef = useRef<HTMLButtonElement>(null);
   const [noMoveCount, setNoMoveCount] = useState(0);
+  const envelopeSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -98,6 +99,15 @@ export default function Page() {
       });
     } else {
       alert('Share link: ' + url);
+    }
+  };
+
+  const handleScrollDown = () => {
+    if (envelopeSectionRef.current) {
+      envelopeSectionRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
     }
   };
 
@@ -437,6 +447,57 @@ export default function Page() {
           align-items: center;
           justify-content: center;
           padding: 20px;
+        }
+
+        .spline-hero {
+          position: relative;
+          width: 100%;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+
+        .spline-section {
+          width: 100%;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .spline-card {
+          width: 100%;
+          aspect-ratio: 16 / 9;
+          border-radius: 20px;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(255, 107, 157, 0.35);
+          background: radial-gradient(circle at top, var(--soft-white), var(--pastel-lavender));
+        }
+
+        .spline-scroll-btn {
+          position: absolute;
+          bottom: 32px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 10px 24px;
+          border-radius: 999px;
+          border: none;
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.9);
+          color: var(--primary-pink);
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+          font-family: 'Poppins', sans-serif;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .spline-scroll-btn:hover {
+          transform: translateX(-50%) translateY(-2px);
+          box-shadow: 0 15px 40px rgba(255, 107, 157, 0.4);
+          background: rgba(255, 255, 255, 1);
         }
 
         .envelope-wrapper {
@@ -1048,6 +1109,14 @@ export default function Page() {
             grid-template-columns: repeat(2, 1fr);
           }
 
+          .spline-hero {
+            padding: 10px;
+          }
+
+          .spline-card {
+            aspect-ratio: 4 / 5;
+          }
+
           .image-modal-content {
             max-width: 95%;
           }
@@ -1077,13 +1146,35 @@ export default function Page() {
         ))}
       </div>
 
+      {/* Spline Hero */}
+      <div className="spline-hero">
+        <div className="container">
+          <div className="spline-section">
+            <div className="spline-card">
+              <iframe
+                src="https://my.spline.design/beepboopbemyvalentine-rsRunEld6VJHXaHpewUBeJG4/"
+                frameBorder="0"
+                width="100%"
+                height="100%"
+                style={{ borderRadius: '20px' }}
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+        <button className="spline-scroll-btn" onClick={handleScrollDown}>
+          <span>Scroll down</span>
+          <span>▼</span>
+        </button>
+      </div>
+
       {/* Landing Page */}
       <div id="landing-page" className="landing-page" style={{
         opacity: showCelebration ? 0 : 1,
         pointerEvents: showCelebration ? 'none' : 'auto',
         transition: 'opacity 0.3s ease'
       }}>
-        <div className="container">
+        <div className="container" ref={envelopeSectionRef}>
           <div className="envelope-wrapper">
             <div 
               className={`envelope ${envelopeOpen ? 'open' : ''}`}
